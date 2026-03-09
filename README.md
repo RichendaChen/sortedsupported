@@ -1,6 +1,6 @@
-# Sorted Supported - React Native App
+# SortedSupported - React Native App
 
-A mobile wrapper app for the Sorted Supported website (sortedsupported.org.uk), providing easy access to support services in Swansea and Neath Port Talbot.
+A mobile wrapper app for the SortedSupported website (sortedsupported.org.uk), providing easy access to support services in Swansea and Neath Port Talbot.
 
 ## Features
 

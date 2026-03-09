@@ -1,14 +1,60 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WebViewScreen = ({ route, navigation }) => {
   const { url, title } = route.params;
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState(url);
   const webViewRef = React.useRef(null);
+
+  useEffect(() => {
+    checkIfFavorited();
+  }, [currentUrl]);
+
+  const checkIfFavorited = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('favourites');
+      if (stored) {
+        const favourites = JSON.parse(stored);
+        const isFav = favourites.some(fav => fav.url === currentUrl);
+        setIsFavorited(isFav);
+      }
+    } catch (error) {
+      console.error('Error checking favorites:', error);
+    }
+  };
+
+  const toggleFavourite = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('favourites');
+      let favourites = stored ? JSON.parse(stored) : [];
+
+      if (isFavorited) {
+        favourites = favourites.filter(fav => fav.url !== currentUrl);
+        Alert.alert('Removed', 'Page removed from favourites');
+      } else {
+        const newFav = {
+          id: Date.now().toString(),
+          title: title || 'Untitled Page',
+          url: currentUrl,
+        };
+        favourites.push(newFav);
+        Alert.alert('Added', 'Page added to favourites');
+      }
+
+      await AsyncStorage.setItem('favourites', JSON.stringify(favourites));
+      setIsFavorited(!isFavorited);
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      Alert.alert('Error', 'Failed to update favourites');
+    }
+  };
 
   const handleNavigationStateChange = (navState) => {
     setCanGoBack(navState.canGoBack);
@@ -67,14 +113,30 @@ const WebViewScreen = ({ route, navigation }) => {
         >
           <Ionicons name="reload" size={24} color="#5B6FA8" />
         </TouchableOpacity>
+
+        <View style={{ flex: 1 }} />
+
+        <TouchableOpacity 
+          onPress={toggleFavourite}
+          style={styles.controlButton}
+        >
+          <Ionicons 
+            name={isFavorited ? 'heart' : 'heart-outline'} 
+            size={24} 
+            color={isFavorited ? '#FF6B9D' : '#5B6FA8'} 
+          />
+        </TouchableOpacity>
       </View>
 
       {/* WebView */}
       <WebView
         ref={webViewRef}
-        source={{ uri: url }}
+        source={{ uri: currentUrl }}
         style={styles.webview}
-        onNavigationStateChange={handleNavigationStateChange}
+        onNavigationStateChange={(navState) => {
+          handleNavigationStateChange(navState);
+          setCurrentUrl(navState.url);
+        }}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => setLoading(false)}
         startInLoadingState={true}

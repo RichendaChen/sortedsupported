@@ -15,8 +15,8 @@ const ShareScreen = () => {
   const shareApp = async () => {
     try {
       const result = await Share.share({
-        message: 'Check out Sorted Supported - Support services for Swansea and Neath Port Talbot\n\nhttps://www.sortedsupported.org.uk/?utm_source=app&utm_medium=mobile&utm_campaign=app_share',
-        title: 'Sorted Supported',
+        message: 'Check out SortedSupported - Support services for Swansea and Neath Port Talbot\n\nhttps://www.sortedsupported.org.uk/?utm_source=app&utm_medium=mobile&utm_campaign=app_share',
+        title: 'SortedSupported',
       });
 
       if (result.action === Share.sharedAction) {
@@ -37,7 +37,7 @@ const ShareScreen = () => {
     {
       id: 1,
       title: 'Share App',
-      description: 'Tell others about Sorted Supported',
+      description: 'Tell others about SortedSupported',
       icon: 'share-social',
       color: '#5B6FA8',
       action: shareApp,
@@ -69,7 +69,7 @@ const ShareScreen = () => {
       <View style={styles.content}>
         <View style={styles.infoCard}>
           <Ionicons name="information-circle" size={50} color="#5B6FA8" />
-          <Text style={styles.infoTitle}>Share Sorted Supported</Text>
+          <Text style={styles.infoTitle}>Share SortedSupported</Text>
           <Text style={styles.infoText}>
             Help others discover support services in Swansea and Neath Port Talbot
           </Text>

@@ -24,7 +24,7 @@ function HomeStack() {
         component={WebViewScreen}
         options={{ 
           headerShown: true,
-          title: 'Sorted Supported'
+          title: 'SortedSupported'
         }}
       />
     </Stack.Navigator>

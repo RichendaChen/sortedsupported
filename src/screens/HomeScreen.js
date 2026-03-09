@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+const logoImage = require('../../assets/icon.png');
+
 const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -51,7 +53,7 @@ const HomeScreen = ({ navigation }) => {
   ];
 
   const handleGetHelpNow = () => {
-    const urgentUrl = 'https://www.sortedsupported.org.uk/?utm_source=app&utm_medium=mobile&utm_campaign=app';
+    const urgentUrl = 'https://www.sortedsupported.org.uk/home-page/need-urgent-help/?utm_source=app&utm_medium=mobile&utm_campaign=app';
     navigation.navigate('WebView', { url: urgentUrl, title: 'Get Help Now' });
   };
 
@@ -66,20 +68,7 @@ const HomeScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header with Logo */}
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoShapes}>
-              <View style={[styles.shape, { backgroundColor: '#FFB84D', top: 10, left: 0 }]} />
-              <View style={[styles.shape, { backgroundColor: '#F5B8D4', top: 0, left: 20 }]} />
-              <View style={[styles.shape, { backgroundColor: '#A4B5D9', top: 20, left: 15 }]} />
-              <View style={[styles.shape, { backgroundColor: '#FFE66D', top: 10, left: 35 }]} />
-              <View style={[styles.shape, { backgroundColor: '#B8E0F0', top: 30, left: 5 }]} />
-            </View>
-            <View style={styles.logoText}>
-              <Text style={styles.logoTitle}>Sorted</Text>
-              <Text style={styles.logoTitle}>Supported</Text>
-              <Text style={styles.logoSubtitle}>.org.uk</Text>
-            </View>
-          </View>
+          <Image source={logoImage} style={styles.logoImage} />
         </View>
 
         {/* Get Help Now Button */}
@@ -161,6 +150,11 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+    resizeMode: 'contain',
   },
   logoShapes: {
     width: 60,
