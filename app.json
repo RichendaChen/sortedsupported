@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
@@ -16,14 +16,20 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uk.org.sortedsupported"
+      "bundleIdentifier": "uk.org.sortedsupported",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SortedSupported uses your location to help find the nearest professional support option."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "uk.org.sortedsupported"
+      "package": "uk.org.sortedsupported",
+      "permissions": [
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/icon.png"
