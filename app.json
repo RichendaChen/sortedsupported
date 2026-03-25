@@ -17,8 +17,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "uk.org.sortedsupported",
+      "buildNumber": "2",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "SortedSupported uses your location to help find the nearest professional support option."
+        "NSLocationWhenInUseUsageDescription": "SortedSupported uses your location to help find the nearest professional support option.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,6 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "uk.org.sortedsupported",
+      "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION"
       ]
@@ -36,6 +39,12 @@
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8e1b8f2e-eca9-44ad-90d8-3e9c3520da02"
+      }
+    },
+    "owner": "dubway4201"
   }
 }
