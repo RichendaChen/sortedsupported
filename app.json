@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "uk.org.sortedsupported",
-      "buildNumber": "2",
+      "buildNumber": "4",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SortedSupported uses your location to help find the nearest professional support option.",
         "ITSAppUsesNonExemptEncryption": false
@@ -29,7 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "uk.org.sortedsupported",
-      "versionCode": 1,
+      "versionCode": 4,
       "permissions": [
         "ACCESS_FINE_LOCATION"
       ]
