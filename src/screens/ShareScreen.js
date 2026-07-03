@@ -20,7 +20,7 @@ const SHARE_MESSAGE =
   'Check out SortedSupported - Support services for Swansea and Neath Port Talbot\n\n' + SHARE_URL;
 
 const ShareScreen = () => {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const { triggerLight } = useHaptics();
 
   const shareApp = async () => {
@@ -62,14 +62,6 @@ const ShareScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Share</Text>
-        <TouchableOpacity
-          onPress={toggleTheme}
-          style={styles.themeToggle}
-          accessibilityRole="button"
-          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={22} color={theme.primary} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>

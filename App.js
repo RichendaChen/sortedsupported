@@ -8,6 +8,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import WebViewScreen from './src/screens/WebViewScreen';
 import FavouritesScreen from './src/screens/FavouritesScreen';
 import ShareScreen from './src/screens/ShareScreen';
+import UrgentHelpScreen from './src/screens/UrgentHelpScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { FavouritesProvider } from './src/context/FavouritesContext';
 
@@ -28,6 +29,14 @@ function HomeStack() {
         options={{ 
           headerShown: true,
           title: 'SortedSupported'
+        }}
+      />
+      <Stack.Screen
+        name="UrgentHelp"
+        component={UrgentHelpScreen}
+        options={{
+          headerShown: true,
+          title: 'Need urgent help?',
         }}
       />
     </Stack.Navigator>

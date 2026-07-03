@@ -136,6 +136,13 @@ const WebViewScreen = ({ route, navigation }) => {
         source={{ uri: currentUrl }}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}
+        onShouldStartLoadWithRequest={(request) => {
+          if (request.url.startsWith('tel:') || request.url.startsWith('mailto:')) {
+            Linking.openURL(request.url).catch(() => {});
+            return false;
+          }
+          return true;
+        }}
         onLoadStart={() => {
           setLoading(true);
           setWebViewError(null);

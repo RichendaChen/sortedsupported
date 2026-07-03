@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ScrollView,
   StatusBar,
   Image,
+  Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,8 +45,9 @@ const BASE_CATEGORIES = [
 ];
 
 const HomeScreen = ({ navigation }) => {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, toggleTheme } = useTheme();
   const { triggerLight } = useHaptics();
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   const handleCategoryPress = (category) => {
     triggerLight();
@@ -72,8 +75,8 @@ const HomeScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.topBarMenuButton}
             accessibilityRole="button"
-            accessibilityLabel="Open main Sorted Supported site"
-            onPress={() => handleCategoryPress(BASE_CATEGORIES[0])}
+            accessibilityLabel="Open settings"
+            onPress={() => setSettingsVisible(true)}
           >
             <Ionicons name="menu" size={24} color={theme.primary} />
           </TouchableOpacity>
@@ -117,6 +120,58 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.urgentHelpButton}
+        onPress={() => { triggerLight(); navigation.navigate('UrgentHelp'); }}
+        accessibilityRole="button"
+        accessibilityLabel="Need urgent help"
+      >
+        <Text style={styles.urgentHelpText}>Need urgent help?</Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={settingsVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setSettingsVisible(false)}
+        >
+          <TouchableOpacity
+            style={[styles.modalCard, { backgroundColor: theme.surface }]}
+            activeOpacity={1}
+            onPress={() => {}}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Settings</Text>
+              <TouchableOpacity
+                onPress={() => setSettingsVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close settings"
+              >
+                <Ionicons name="close" size={22} color={theme.subtext} />
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.modalDivider, { backgroundColor: theme.border }]} />
+            <View style={styles.settingRow}>
+              <View style={styles.settingLabel}>
+                <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={theme.primary} />
+                <Text style={[styles.settingText, { color: theme.text }]}>Dark mode</Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={() => { triggerLight(); toggleTheme(); }}
+                trackColor={{ false: '#C0C0C0', true: '#8FA0D8' }}
+                thumbColor={isDark ? '#5B6FA8' : '#FFFFFF'}
+              />
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -170,12 +225,12 @@ const createStyles = (theme) =>
     topBarTitle: {
       fontSize: 24,
       fontWeight: '700',
-      color: '#2D3A57',
+      color: theme.text,
     },
     topBarSubtitle: {
       fontSize: 13,
       marginTop: 1,
-      color: '#5D6790',
+      color: theme.subtext,
     },
     topBarMenuButton: {
       width: 42,
@@ -183,7 +238,66 @@ const createStyles = (theme) =>
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#EEF2FB',
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    urgentHelpButton: {
+      marginHorizontal: 20,
+      marginBottom: 14,
+      marginTop: 4,
+      backgroundColor: '#F26A1B',
+      borderRadius: 28,
+      paddingVertical: 16,
+      alignItems: 'center',
+      shadowColor: '#F26A1B',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    urgentHelpText: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      fontWeight: '700',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'flex-end',
+    },
+    modalCard: {
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 20,
+      paddingBottom: 36,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+    },
+    modalDivider: {
+      height: 1,
+      marginBottom: 16,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    settingLabel: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    settingText: {
+      fontSize: 16,
     },
     categoriesContainer: {
       marginTop: 14,
