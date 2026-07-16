@@ -1,202 +1,277 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Alert } from 'react-native';
-import { WebView } from 'react-native-webview';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Alert,
+} from 'react-native';
+import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFavourites } from '../context/FavouritesContext';
+import { useTheme } from '../context/ThemeContext';
+import { useHaptics } from '../hooks/useHaptics';
+import SkeletonLoader from '../components/SkeletonLoader';
+
+let WebViewComponent = null;
+try {
+  WebViewComponent = require('react-native-webview').WebView;
+} catch (error) {
+  WebViewComponent = null;
+}
 
 const WebViewScreen = ({ route, navigation }) => {
   const { url, title } = route.params;
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(false);
+  const webViewRef = useRef(null);
   const [loading, setLoading] = useState(true);
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [webViewError, setWebViewError] = useState(null);
   const [currentUrl, setCurrentUrl] = useState(url);
-  const webViewRef = React.useRef(null);
+  const { addFavourite, removeFavouriteByUrl, isFavourited } = useFavourites();
+  const { theme, isDark } = useTheme();
+  const { triggerMedium, triggerSuccess } = useHaptics();
 
-  useEffect(() => {
-    checkIfFavorited();
-  }, [currentUrl]);
-
-  const checkIfFavorited = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('favourites');
-      if (stored) {
-        const favourites = JSON.parse(stored);
-        const isFav = favourites.some(fav => fav.url === currentUrl);
-        setIsFavorited(isFav);
-      }
-    } catch (error) {
-      console.error('Error checking favorites:', error);
-    }
-  };
+  const isFavorited = isFavourited(currentUrl);
 
   const toggleFavourite = async () => {
     try {
-      const stored = await AsyncStorage.getItem('favourites');
-      let favourites = stored ? JSON.parse(stored) : [];
-
       if (isFavorited) {
-        favourites = favourites.filter(fav => fav.url !== currentUrl);
+        triggerMedium();
+        await removeFavouriteByUrl(currentUrl);
         Alert.alert('Removed', 'Page removed from favourites');
-      } else {
-        const newFav = {
-          id: Date.now().toString(),
-          title: title || 'Untitled Page',
-          url: currentUrl,
-        };
-        favourites.push(newFav);
-        Alert.alert('Added', 'Page added to favourites');
+        return;
       }
 
-      await AsyncStorage.setItem('favourites', JSON.stringify(favourites));
-      setIsFavorited(!isFavorited);
+      const newFav = {
+        id: Date.now().toString(),
+        title: title || 'Untitled Page',
+        url: currentUrl,
+      };
+      const added = await addFavourite(newFav);
+      if (added) {
+        triggerSuccess();
+        Alert.alert('Added', 'Page added to favourites');
+      }
     } catch (error) {
-      console.error('Error updating favorites:', error);
+      console.error('Error updating favourites:', error);
       Alert.alert('Error', 'Failed to update favourites');
     }
   };
 
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={toggleFavourite}
+          accessibilityRole="button"
+          accessibilityLabel={isFavorited ? 'Remove from favourites' : 'Add to favourites'}
+          style={{ paddingHorizontal: 8 }}
+        >
+          <Ionicons
+            name={isFavorited ? 'heart' : 'heart-outline'}
+            size={24}
+            color={isFavorited ? theme.danger : theme.primary}
+          />
+        </TouchableOpacity>
+      ),
+    });
+  }, [isFavorited, currentUrl, theme]);
+
   const handleNavigationStateChange = (navState) => {
-    setCanGoBack(navState.canGoBack);
-    setCanGoForward(navState.canGoForward);
-  };
-
-  const goBack = () => {
-    if (webViewRef.current && canGoBack) {
-      webViewRef.current.goBack();
-    }
-  };
-
-  const goForward = () => {
-    if (webViewRef.current && canGoForward) {
-      webViewRef.current.goForward();
-    }
+    setCurrentUrl(navState.url);
   };
 
   const reload = () => {
     if (webViewRef.current) {
+      setWebViewError(null);
       webViewRef.current.reload();
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Navigation Controls */}
-      <View style={styles.controls}>
-        <TouchableOpacity 
-          onPress={goBack} 
-          disabled={!canGoBack}
-          style={styles.controlButton}
-        >
-          <Ionicons 
-            name="arrow-back" 
-            size={24} 
-            color={canGoBack ? '#5B6FA8' : '#CCC'} 
-          />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          onPress={goForward} 
-          disabled={!canGoForward}
-          style={styles.controlButton}
-        >
-          <Ionicons 
-            name="arrow-forward" 
-            size={24} 
-            color={canGoForward ? '#5B6FA8' : '#CCC'} 
-          />
-        </TouchableOpacity>
+  const handleError = () => {
+    setWebViewError('Unable to load this page. Check your connection and try again.');
+    setLoading(false);
+  };
 
-        <TouchableOpacity 
-          onPress={reload}
-          style={styles.controlButton}
-        >
-          <Ionicons name="reload" size={24} color="#5B6FA8" />
-        </TouchableOpacity>
+  const styles = createStyles(theme);
 
-        <View style={{ flex: 1 }} />
-
-        <TouchableOpacity 
-          onPress={toggleFavourite}
-          style={styles.controlButton}
+  if (!WebViewComponent) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="construct-outline" size={66} color={theme.subtext} />
+        <Text style={styles.errorTitle}>Web view unavailable</Text>
+        <Text style={styles.errorText}>
+          This build does not include the in-app web viewer. Open this page in your browser, or rebuild the app
+          with EAS.
+        </Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          accessibilityLabel="Open page in browser"
+          onPress={() => Linking.openURL(currentUrl)}
         >
-          <Ionicons 
-            name={isFavorited ? 'heart' : 'heart-outline'} 
-            size={24} 
-            color={isFavorited ? '#FF6B9D' : '#5B6FA8'} 
-          />
+          <Text style={styles.retryText}>Open in browser</Text>
         </TouchableOpacity>
       </View>
+    );
+  }
 
-      {/* WebView */}
-      <WebView
+  if (webViewError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="cloud-offline-outline" size={66} color={theme.subtext} />
+          <Text style={styles.errorTitle}>Page unavailable</Text>
+          <Text style={styles.errorText}>{webViewError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={reload} accessibilityLabel="Retry loading page">
+            <Text style={styles.retryText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <WebViewComponent
         ref={webViewRef}
         source={{ uri: currentUrl }}
         style={styles.webview}
-        onNavigationStateChange={(navState) => {
-          handleNavigationStateChange(navState);
-          setCurrentUrl(navState.url);
+        onNavigationStateChange={handleNavigationStateChange}
+        onShouldStartLoadWithRequest={(request) => {
+          if (request.url.startsWith('tel:') || request.url.startsWith('mailto:')) {
+            Linking.openURL(request.url).catch(() => {});
+            return false;
+          }
+          return true;
         }}
-        onLoadStart={() => setLoading(true)}
+        onLoadStart={() => {
+          setLoading(true);
+          setWebViewError(null);
+        }}
         onLoadEnd={() => setLoading(false)}
-        startInLoadingState={true}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#5B6FA8" />
-          </View>
-        )}
+        onError={handleError}
+        onHttpError={handleError}
+        injectedJavaScriptBeforeContentLoaded={`
+          (function() {
+            var hideSelectors = [
+              'header',
+              '#header',
+              '#masthead',
+              '.site-header',
+              '.main-header-bar',
+              '.elementor-location-header',
+              '.navbar',
+              'nav.navbar',
+              '.menu-toggle',
+              '.elementor-menu-toggle',
+              '.wpml-ls-statics-shortcode_actions',
+              '.easy-read-tab'
+            ];
+
+            function hideChrome() {
+              hideSelectors.forEach(function(selector) {
+                document.querySelectorAll(selector).forEach(function(el) {
+                  el.style.display = 'none';
+                });
+              });
+
+              var style = document.getElementById('app-webview-cleanup-style');
+              if (!style) {
+                style = document.createElement('style');
+                style.id = 'app-webview-cleanup-style';
+                style.textContent = [
+                  'body { padding-top: 0 !important; margin-top: 0 !important; }',
+                  'main, #content, .site-content { margin-top: 0 !important; padding-top: 0 !important; }',
+                  '.hero, .page-hero, .hero-section, .banner, #hero { margin-top: 0 !important; }'
+                ].join('');
+                if (document.head) {
+                  document.head.appendChild(style);
+                }
+              }
+            }
+
+            hideChrome();
+            setTimeout(hideChrome, 250);
+            setTimeout(hideChrome, 800);
+            setTimeout(hideChrome, 1600);
+            document.documentElement.style.colorScheme = '${isDark ? 'dark' : 'light'}';
+          })();
+          true;
+        `}
       />
 
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#5B6FA8" />
+          <View style={styles.loadingCard}>
+            <SkeletonLoader width="85%" height={18} />
+            <SkeletonLoader width="95%" height={14} style={{ marginTop: 10 }} />
+            <SkeletonLoader width="90%" height={14} style={{ marginTop: 10 }} />
+            <SkeletonLoader width="60%" height={14} style={{ marginTop: 10 }} />
+          </View>
         </View>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  controls: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    justifyContent: 'flex-start',
-  },
-  controlButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-  },
-  webview: {
-    flex: 1,
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-  },
-});
+const createStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.surface,
+    },
+    webview: {
+      flex: 1,
+    },
+    loadingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.mode === 'dark' ? 'rgba(18, 18, 18, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+    },
+    loadingCard: {
+      width: '90%',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+      padding: 16,
+    },
+    errorContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      backgroundColor: theme.background,
+    },
+    errorTitle: {
+      marginTop: 14,
+      fontSize: 22,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    errorText: {
+      marginTop: 8,
+      fontSize: 14,
+      color: theme.subtext,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    retryButton: {
+      marginTop: 20,
+      backgroundColor: theme.primary,
+      borderRadius: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+    },
+    retryText: {
+      color: '#FFFFFF',
+      fontWeight: '600',
+      fontSize: 16,
+    },
+  });
 
 export default WebViewScreen;

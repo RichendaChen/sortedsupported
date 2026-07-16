@@ -2,10 +2,10 @@
   "expo": {
     "name": "SortedSupported",
     "slug": "sortedsupported",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
@@ -16,20 +16,35 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uk.org.sortedsupported"
+      "bundleIdentifier": "uk.org.sortedsupported",
+      "buildNumber": "4",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SortedSupported uses your location to help find the nearest professional support option.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "uk.org.sortedsupported"
+      "package": "uk.org.sortedsupported",
+      "versionCode": 4,
+      "permissions": [
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/icon.png"
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8e1b8f2e-eca9-44ad-90d8-3e9c3520da02"
+      }
+    },
+    "owner": "dubway4201"
   }
 }
