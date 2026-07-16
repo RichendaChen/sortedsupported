@@ -1,23 +1,30 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  Share,
   TouchableOpacity,
+  TextInput,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import DragList from 'react-native-draglist';
+import { NotebookPen, Pencil, Share2 } from 'lucide-react-native';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { useTheme } from '../context/ThemeContext';
 import { useFavourites } from '../context/FavouritesContext';
 import { useHaptics } from '../hooks/useHaptics';
 
 const FavouritesScreen = ({ navigation }) => {
-  const { favourites, isLoaded, removeFavouriteById } = useFavourites();
+  const { favourites, isLoaded, removeFavouriteById, updateFavouriteNote, reorderFavourites } =
+    useFavourites();
   const { theme } = useTheme();
   const { triggerMedium } = useHaptics();
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const inputRefs = useRef({});
 
   const removeFavourite = (id) => {
     Alert.alert('Remove Favourite', 'Are you sure you want to remove this from favourites?', [
@@ -40,33 +47,133 @@ const FavouritesScreen = ({ navigation }) => {
     });
   };
 
+  const focusNoteInput = (id) => {
+    setTimeout(() => {
+      inputRefs.current[id]?.focus();
+    }, 40);
+  };
+
+  const saveNote = async (itemId, note) => {
+    await updateFavouriteNote(itemId, note);
+    setEditingNoteId(null);
+    setNoteDraft('');
+  };
+
+  const toggleNoteEditor = (item) => {
+    triggerMedium();
+
+    if (editingNoteId === item.id) {
+      saveNote(item.id, noteDraft);
+      return;
+    }
+
+    setEditingNoteId(item.id);
+    setNoteDraft(item.note || '');
+    focusNoteInput(item.id);
+  };
+
+  const shareFavourite = async (item) => {
+    triggerMedium();
+
+    const noteText = item.note?.trim() ? `\n\nNote: ${item.note.trim()}` : '';
+
+    try {
+      await Share.share({
+        title: item.title,
+        message: `${item.title}\n${item.url}${noteText}`,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share favourite');
+    }
+  };
+
+  const onReordered = async (fromIndex, toIndex) => {
+    const nextOrder = [...favourites];
+    const [movedItem] = nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, movedItem);
+    await reorderFavourites(nextOrder);
+  };
+
   const styles = createStyles(theme);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.favouriteCard}
-      onPress={() => openFavourite(item)}
-      accessibilityRole="button"
-      accessibilityLabel={`Open favourite ${item.title}`}
-    >
-      <View style={styles.favouriteContent}>
-        <Ionicons name="heart" size={24} color={theme.danger} style={styles.heartIcon} />
+  const renderItem = ({ item, onDragStart, onDragEnd, isActive }) => {
+    const hasNote = Boolean(item.note?.trim());
+    const isEditing = editingNoteId === item.id;
+
+    return (
+      <TouchableOpacity
+        style={[styles.favouriteCard, isActive && styles.activeCard]}
+        onPress={() => openFavourite(item)}
+        onLongPress={onDragStart}
+        onPressOut={onDragEnd}
+        delayLongPress={220}
+        disabled={isEditing}
+        accessibilityRole="button"
+        accessibilityLabel={`Open favourite ${item.title}`}
+      >
+        <TouchableOpacity
+          onPress={() => removeFavourite(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove favourite ${item.title}`}
+          style={styles.heartButton}
+        >
+          <Ionicons name="heart" size={24} color={theme.danger} style={styles.heartIcon} />
+        </TouchableOpacity>
+
         <View style={styles.favouriteText}>
           <Text style={styles.favouriteTitle}>{item.title}</Text>
-          <Text style={styles.favouriteUrl} numberOfLines={1}>
-            {item.url}
-          </Text>
+
+          {hasNote && !isEditing ? <Text style={styles.noteText}>{item.note.trim()}</Text> : null}
+
+          {isEditing ? (
+            <TextInput
+              ref={(ref) => {
+                inputRefs.current[item.id] = ref;
+              }}
+              style={styles.noteInput}
+              value={noteDraft}
+              onChangeText={setNoteDraft}
+              placeholder="Add a note"
+              placeholderTextColor={theme.subtext}
+              multiline
+              maxLength={280}
+              onBlur={() => saveNote(item.id, noteDraft)}
+              onSubmitEditing={() => saveNote(item.id, noteDraft)}
+              blurOnSubmit
+              returnKeyType="done"
+              accessibilityLabel={`Note input for ${item.title}`}
+            />
+          ) : null}
+
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              onPress={() => toggleNoteEditor(item)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                hasNote ? `Edit note for ${item.title}` : `Add note for ${item.title}`
+              }
+              style={styles.iconButton}
+            >
+              {hasNote ? (
+                <Pencil size={20} color={theme.subtext} strokeWidth={2.2} />
+              ) : (
+                <NotebookPen size={20} color={theme.subtext} strokeWidth={2.2} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => shareFavourite(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`Share favourite ${item.title}`}
+              style={styles.iconButton}
+            >
+              <Share2 size={20} color={theme.subtext} strokeWidth={2.2} />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-      <TouchableOpacity
-        onPress={() => removeFavourite(item.id)}
-        accessibilityRole="button"
-        accessibilityLabel={`Remove favourite ${item.title}`}
-      >
-        <Ionicons name="trash-outline" size={22} color={theme.subtext} />
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -93,9 +200,10 @@ const FavouritesScreen = ({ navigation }) => {
           <Text style={styles.emptySubtext}>Save pages you visit frequently for quick access</Text>
         </View>
       ) : (
-        <FlatList
+        <DragList
           data={favourites}
           renderItem={renderItem}
+          onReordered={onReordered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           accessibilityLabel="Favourites list"
@@ -128,8 +236,7 @@ const createStyles = (theme) =>
     },
     favouriteCard: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
       backgroundColor: theme.surface,
       padding: 15,
       borderRadius: 12,
@@ -142,26 +249,56 @@ const createStyles = (theme) =>
       shadowRadius: 3,
       elevation: 2,
     },
-    favouriteContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
+    activeCard: {
+      opacity: 0.92,
+      transform: [{ scale: 0.99 }],
+    },
+    heartButton: {
+      marginRight: 12,
+      paddingTop: 2,
+      paddingHorizontal: 4,
+      paddingBottom: 4,
     },
     heartIcon: {
-      marginRight: 15,
+      marginRight: 0,
     },
     favouriteText: {
       flex: 1,
     },
     favouriteTitle: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '600',
       color: theme.text,
       marginBottom: 4,
     },
-    favouriteUrl: {
+    noteText: {
+      fontSize: 15,
+      color: '#666666',
+      lineHeight: 21,
+      marginTop: 2,
+    },
+    noteInput: {
       fontSize: 12,
-      color: theme.subtext,
+      color: theme.text,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      marginTop: 8,
+      minHeight: 42,
+      textAlignVertical: 'top',
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      marginTop: 8,
+      gap: 14,
+    },
+    iconButton: {
+      padding: 2,
     },
     emptyContainer: {
       flex: 1,

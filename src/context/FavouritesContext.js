@@ -83,6 +83,29 @@ export const FavouritesProvider = ({ children }) => {
     [persist]
   );
 
+  const updateFavouriteNote = useCallback(
+    async (id, note) => {
+      const cleanedNote = note.trim();
+
+      setFavourites((prev) => {
+        const next = prev.map((fav) => (fav.id === id ? { ...fav, note: cleanedNote } : fav));
+        persist(next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  const reorderFavourites = useCallback(
+    async (nextOrder) => {
+      setFavourites(() => {
+        persist(nextOrder);
+        return nextOrder;
+      });
+    },
+    [persist]
+  );
+
   const isFavourited = useCallback(
     (url) => favourites.some((fav) => fav.url === url),
     [favourites]
@@ -95,9 +118,20 @@ export const FavouritesProvider = ({ children }) => {
       addFavourite,
       removeFavouriteByUrl,
       removeFavouriteById,
+      updateFavouriteNote,
+      reorderFavourites,
       isFavourited,
     }),
-    [favourites, isLoaded, addFavourite, removeFavouriteByUrl, removeFavouriteById, isFavourited]
+    [
+      favourites,
+      isLoaded,
+      addFavourite,
+      removeFavouriteByUrl,
+      removeFavouriteById,
+      updateFavouriteNote,
+      reorderFavourites,
+      isFavourited,
+    ]
   );
 
   return <FavouritesContext.Provider value={value}>{children}</FavouritesContext.Provider>;
