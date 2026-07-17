@@ -3,6 +3,12 @@ import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'theme_preference';
+const TEXT_SCALE_STORAGE_KEY = 'text_scale_preference';
+const MIN_TEXT_SCALE = 0.8;
+const MAX_TEXT_SCALE = 1.5;
+
+const clampTextScale = (value) =>
+  Math.min(MAX_TEXT_SCALE, Math.max(MIN_TEXT_SCALE, Number(value.toFixed(2))));
 
 const themes = {
   light: {
@@ -34,18 +40,29 @@ const ThemeContext = createContext(null);
 export const ThemeProvider = ({ children }) => {
   const systemScheme = useColorScheme();
   const [preference, setPreference] = useState(null);
+  const [textScale, setTextScaleState] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadPreference = async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (isMounted && (stored === 'light' || stored === 'dark')) {
-          setPreference(stored);
+        const [storedTheme, storedScale] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY),
+          AsyncStorage.getItem(TEXT_SCALE_STORAGE_KEY),
+        ]);
+
+        const parsedScale = Number.parseFloat(storedScale || '');
+
+        if (isMounted && (storedTheme === 'light' || storedTheme === 'dark')) {
+          setPreference(storedTheme);
+        }
+
+        if (isMounted && Number.isFinite(parsedScale)) {
+          setTextScaleState(clampTextScale(parsedScale));
         }
       } catch (error) {
-        console.error('Error loading theme preference:', error);
+        console.error('Error loading preferences:', error);
       }
     };
 
@@ -69,14 +86,32 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
+  const setTextScale = async (nextScale) => {
+    const normalizedScale = clampTextScale(Number(nextScale) || 1);
+    setTextScaleState(normalizedScale);
+
+    try {
+      await AsyncStorage.setItem(TEXT_SCALE_STORAGE_KEY, String(normalizedScale));
+    } catch (error) {
+      console.error('Error saving text scale preference:', error);
+    }
+  };
+
+  const increaseTextScale = () => setTextScale(textScale + 0.1);
+  const decreaseTextScale = () => setTextScale(textScale - 0.1);
+
   const value = useMemo(
     () => ({
       theme: themes[mode],
       isDark: mode === 'dark',
       preference,
+      textScale,
       toggleTheme,
+      setTextScale,
+      increaseTextScale,
+      decreaseTextScale,
     }),
-    [mode, preference]
+    [mode, preference, textScale]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

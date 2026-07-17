@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   Text,
   Alert,
+  Share,
 } from 'react-native';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,18 +27,42 @@ const WebViewScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [webViewError, setWebViewError] = useState(null);
   const [currentUrl, setCurrentUrl] = useState(url);
-  const { addFavourite, removeFavouriteByUrl, isFavourited } = useFavourites();
+  const { favourites, addFavourite, removeFavouriteByUrl, isFavourited } = useFavourites();
   const { theme, isDark } = useTheme();
   const { triggerMedium, triggerSuccess } = useHaptics();
 
   const isFavorited = isFavourited(currentUrl);
+  const currentFavourite = favourites.find((fav) => fav.url === currentUrl);
 
-  const toggleFavourite = async () => {
+  const shareCurrentPage = useCallback(async () => {
+    triggerMedium();
+
+    const noteText = currentFavourite?.note?.trim() ? `\n\nNote: ${currentFavourite.note.trim()}` : '';
+
+    try {
+      await Share.share({
+        title: title || 'Untitled Page',
+        message: `${title || 'Untitled Page'}\n${currentUrl}${noteText}`,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share favourite');
+    }
+  }, [currentFavourite, currentUrl, title, triggerMedium]);
+
+  const toggleFavourite = useCallback(async () => {
     try {
       if (isFavorited) {
-        triggerMedium();
-        await removeFavouriteByUrl(currentUrl);
-        Alert.alert('Removed', 'Page removed from favourites');
+        Alert.alert('Remove Favourite', 'Are you sure you want to remove this from favourites?', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              triggerMedium();
+              await removeFavouriteByUrl(currentUrl);
+            },
+          },
+        ]);
         return;
       }
 
@@ -47,34 +72,56 @@ const WebViewScreen = ({ route, navigation }) => {
         url: currentUrl,
       };
       const added = await addFavourite(newFav);
+
       if (added) {
         triggerSuccess();
-        Alert.alert('Added', 'Page added to favourites');
+
+        Alert.alert('Added', 'Page added to favourites', [
+          {
+            text: 'Undo',
+            onPress: async () => {
+              triggerMedium();
+              await removeFavouriteByUrl(newFav.url);
+            },
+          },
+          { text: 'OK' },
+        ]);
       }
     } catch (error) {
       console.error('Error updating favourites:', error);
       Alert.alert('Error', 'Failed to update favourites');
     }
-  };
+  }, [addFavourite, currentUrl, isFavorited, removeFavouriteByUrl, title, triggerMedium, triggerSuccess]);
 
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={toggleFavourite}
-          accessibilityRole="button"
-          accessibilityLabel={isFavorited ? 'Remove from favourites' : 'Add to favourites'}
-          style={{ paddingHorizontal: 8 }}
-        >
-          <Ionicons
-            name={isFavorited ? 'heart' : 'heart-outline'}
-            size={24}
-            color={isFavorited ? theme.danger : theme.primary}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={shareCurrentPage}
+            accessibilityRole="button"
+            accessibilityLabel="Share this page"
+            style={styles.headerActionButton}
+          >
+            <Ionicons name="share-social-outline" size={23} color={theme.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={toggleFavourite}
+            accessibilityRole="button"
+            accessibilityLabel={isFavorited ? 'Remove from favourites' : 'Add to favourites'}
+            style={styles.headerActionButton}
+          >
+            <Ionicons
+              name={isFavorited ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isFavorited ? theme.danger : theme.primary}
+            />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [isFavorited, currentUrl, theme]);
+  }, [isFavorited, shareCurrentPage, theme, toggleFavourite]);
 
   const handleNavigationStateChange = (navState) => {
     setCurrentUrl(navState.url);
@@ -221,6 +268,14 @@ const createStyles = (theme) =>
     },
     webview: {
       flex: 1,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: 2,
+    },
+    headerActionButton: {
+      paddingHorizontal: 8,
     },
     loadingOverlay: {
       position: 'absolute',

@@ -14,16 +14,18 @@ import DragList from 'react-native-draglist';
 import { NotebookPen, Pencil, Share2 } from 'lucide-react-native';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { useTheme } from '../context/ThemeContext';
+import SettingsModal from '../components/SettingsModal';
 import { useFavourites } from '../context/FavouritesContext';
 import { useHaptics } from '../hooks/useHaptics';
 
 const FavouritesScreen = ({ navigation }) => {
   const { favourites, isLoaded, removeFavouriteById, updateFavouriteNote, reorderFavourites } =
     useFavourites();
-  const { theme } = useTheme();
+  const { theme, textScale } = useTheme();
   const { triggerMedium } = useHaptics();
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const inputRefs = useRef({});
 
   const removeFavourite = (id) => {
@@ -121,16 +123,18 @@ const FavouritesScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.favouriteText}>
-          <Text style={styles.favouriteTitle}>{item.title}</Text>
+          <Text style={[styles.favouriteTitle, { fontSize: 18 * textScale }]}>{item.title}</Text>
 
-          {hasNote && !isEditing ? <Text style={styles.noteText}>{item.note.trim()}</Text> : null}
+          {hasNote && !isEditing ? (
+            <Text style={[styles.noteText, { fontSize: 15 * textScale }]}>{item.note.trim()}</Text>
+          ) : null}
 
           {isEditing ? (
             <TextInput
               ref={(ref) => {
                 inputRefs.current[item.id] = ref;
               }}
-              style={styles.noteInput}
+              style={[styles.noteInput, { fontSize: 12 * textScale }]}
               value={noteDraft}
               onChangeText={setNoteDraft}
               placeholder="Add a note"
@@ -178,7 +182,15 @@ const FavouritesScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Favourites</Text>
+        <Text style={[styles.headerTitle, { fontSize: 28 * textScale }]}>Favourites</Text>
+        <TouchableOpacity
+          style={styles.topBarMenuButton}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          onPress={() => setSettingsVisible(true)}
+        >
+          <Ionicons name="menu" size={24} color={theme.primary} />
+        </TouchableOpacity>
       </View>
 
       {!isLoaded ? (
@@ -196,8 +208,8 @@ const FavouritesScreen = ({ navigation }) => {
       ) : favourites.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="heart-outline" size={80} color={theme.subtext} />
-          <Text style={styles.emptyText}>No favourites yet</Text>
-          <Text style={styles.emptySubtext}>Save pages you visit frequently for quick access</Text>
+          <Text style={[styles.emptyText, { fontSize: 20 * textScale }]}>No favourites yet</Text>
+          <Text style={[styles.emptySubtext, { fontSize: 14 * textScale }]}>Save pages you visit frequently for quick access</Text>
         </View>
       ) : (
         <DragList
@@ -209,6 +221,8 @@ const FavouritesScreen = ({ navigation }) => {
           accessibilityLabel="Favourites list"
         />
       )}
+
+      <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
     </SafeAreaView>
   );
 };
@@ -225,11 +239,23 @@ const createStyles = (theme) =>
       paddingHorizontal: 20,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
     headerTitle: {
-      fontSize: 28,
       fontWeight: 'bold',
       color: theme.primary,
+    },
+    topBarMenuButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     listContent: {
       padding: 20,
@@ -266,7 +292,6 @@ const createStyles = (theme) =>
       flex: 1,
     },
     favouriteTitle: {
-      fontSize: 18,
       fontWeight: '600',
       color: theme.text,
       marginBottom: 4,
@@ -278,7 +303,6 @@ const createStyles = (theme) =>
       marginTop: 2,
     },
     noteInput: {
-      fontSize: 12,
       color: theme.text,
       backgroundColor: theme.background,
       borderWidth: 1,
@@ -307,7 +331,6 @@ const createStyles = (theme) =>
       paddingHorizontal: 40,
     },
     emptyText: {
-      fontSize: 20,
       fontWeight: '600',
       color: theme.text,
       marginTop: 20,

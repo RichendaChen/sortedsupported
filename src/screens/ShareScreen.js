@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import SettingsModal from '../components/SettingsModal';
 import { useHaptics } from '../hooks/useHaptics';
 
 const SHARE_URL =
@@ -20,8 +21,9 @@ const SHARE_MESSAGE =
   'Check out SortedSupported - Support services for Swansea and Neath Port Talbot\n\n' + SHARE_URL;
 
 const ShareScreen = () => {
-  const { theme } = useTheme();
+  const { theme, textScale } = useTheme();
   const { triggerLight } = useHaptics();
+  const [settingsVisible, setSettingsVisible] = React.useState(false);
 
   const shareApp = async () => {
     triggerLight();
@@ -61,14 +63,22 @@ const ShareScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Share</Text>
+        <Text style={[styles.headerTitle, { fontSize: 28 * textScale }]}>Share</Text>
+        <TouchableOpacity
+          style={styles.topBarMenuButton}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          onPress={() => setSettingsVisible(true)}
+        >
+          <Ionicons name="menu" size={24} color={theme.primary} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
         <View style={styles.infoCard}>
           <Ionicons name="information-circle" size={50} color={theme.primary} />
-          <Text style={styles.infoTitle}>Share SortedSupported</Text>
-          <Text style={styles.infoText}>
+          <Text style={[styles.infoTitle, { fontSize: 22 * textScale }]}>Share SortedSupported</Text>
+          <Text style={[styles.infoText, { fontSize: 14 * textScale }]}> 
             Help others discover support services in Swansea and Neath Port Talbot.
           </Text>
         </View>
@@ -80,14 +90,16 @@ const ShareScreen = () => {
           accessibilityLabel="Share SortedSupported"
         >
           <Ionicons name="share-social" size={24} color="#FFFFFF" />
-          <Text style={styles.shareButtonText}>Share SortedSupported</Text>
+          <Text style={[styles.shareButtonText, { fontSize: 18 * textScale }]}>Share SortedSupported</Text>
         </TouchableOpacity>
 
         <View style={styles.websiteCard}>
-          <Text style={styles.websiteLabel}>Website</Text>
-          <Text style={styles.websiteUrl}>www.sortedsupported.org.uk</Text>
+          <Text style={[styles.websiteLabel, { fontSize: 14 * textScale }]}>Website</Text>
+          <Text style={[styles.websiteUrl, { fontSize: 18 * textScale }]}>www.sortedsupported.org.uk</Text>
         </View>
       </View>
+
+      <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
     </SafeAreaView>
   );
 };
@@ -109,18 +121,18 @@ const createStyles = (theme) =>
       justifyContent: 'space-between',
     },
     headerTitle: {
-      fontSize: 28,
       fontWeight: 'bold',
       color: theme.primary,
     },
-    themeToggle: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+    topBarMenuButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.border,
       justifyContent: 'center',
       alignItems: 'center',
+      backgroundColor: theme.background,
     },
     content: {
       flex: 1,
@@ -141,14 +153,12 @@ const createStyles = (theme) =>
       elevation: 3,
     },
     infoTitle: {
-      fontSize: 22,
       fontWeight: 'bold',
       color: theme.primary,
       marginTop: 15,
       marginBottom: 10,
     },
     infoText: {
-      fontSize: 14,
       color: theme.subtext,
       textAlign: 'center',
       lineHeight: 20,
@@ -166,7 +176,6 @@ const createStyles = (theme) =>
     },
     shareButtonText: {
       color: '#FFFFFF',
-      fontSize: 18,
       fontWeight: '700',
     },
     websiteCard: {
@@ -178,12 +187,10 @@ const createStyles = (theme) =>
       alignItems: 'center',
     },
     websiteLabel: {
-      fontSize: 14,
       color: theme.subtext,
       marginBottom: 5,
     },
     websiteUrl: {
-      fontSize: 18,
       fontWeight: 'bold',
       color: theme.primary,
     },

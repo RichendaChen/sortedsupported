@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,14 @@ import {
   ScrollView,
   StatusBar,
   Image,
-  Modal,
-  Switch,
   TextInput,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Application from 'expo-application';
-import Constants from 'expo-constants';
-import { Search, Minus, Plus } from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
+import SettingsModal from '../components/SettingsModal';
 import { useHaptics } from '../hooks/useHaptics';
 
 const logoImage = require('../../assets/icon.png');
@@ -49,28 +46,50 @@ const BASE_CATEGORIES = [
   },
 ];
 
+const ENTITY_MAP = {
+  amp: '&',
+  apos: "'",
+  '#39': "'",
+  '#x27': "'",
+  quot: '"',
+  nbsp: ' ',
+  hellip: '...',
+  ndash: '-',
+  mdash: '--',
+  lsquo: "'",
+  rsquo: "'",
+  ldquo: '"',
+  rdquo: '"',
+};
+
+const decodeHtmlEntities = (value) =>
+  value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, entity) => {
+    const lower = entity.toLowerCase();
+
+    if (lower[0] === '#') {
+      const isHex = lower[1] === 'x';
+      const numericValue = Number.parseInt(lower.slice(isHex ? 2 : 1), isHex ? 16 : 10);
+
+      if (Number.isNaN(numericValue)) {
+        return match;
+      }
+
+      return String.fromCodePoint(numericValue);
+    }
+
+    return ENTITY_MAP[lower] ?? match;
+  });
+
+const sanitizeWpRenderedText = (value) => decodeHtmlEntities(value.replace(/<[^>]*>/g, '').trim());
+
 const HomeScreen = ({ navigation }) => {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme, isDark, textScale } = useTheme();
   const { triggerLight } = useHaptics();
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searchError, setSearchError] = useState(false);
-  const [textScale, setTextScale] = useState(1);
-
-  const appVersion =
-    Application.nativeApplicationVersion ||
-    Constants.expoConfig?.version ||
-    Constants.manifest?.version ||
-    'Unknown';
-  const buildNumber =
-    Application.nativeBuildVersion ||
-    Constants.expoConfig?.ios?.buildNumber ||
-    Constants.expoConfig?.android?.versionCode ||
-    null;
-
-  const displayTextScale = useMemo(() => Math.round(16 * textScale), [textScale]);
 
   useEffect(() => {
     const trimmed = searchQuery.trim();
@@ -102,11 +121,9 @@ const HomeScreen = ({ navigation }) => {
         const mapped = (Array.isArray(data) ? data : [])
           .map((item) => ({
             id: String(item.id),
-            title: (item.title?.rendered || 'Untitled page')
-              .replace(/<[^>]*>/g, '')
-              .trim(),
+            title: sanitizeWpRenderedText(item.title?.rendered || 'Untitled page'),
             url: item.link,
-            excerpt: (item.excerpt?.rendered || '').replace(/<[^>]*>/g, '').trim(),
+            excerpt: sanitizeWpRenderedText(item.excerpt?.rendered || ''),
           }))
           .filter((item) => item.url);
 
@@ -145,16 +162,6 @@ const HomeScreen = ({ navigation }) => {
 
   const hasQuery = Boolean(searchQuery.trim());
 
-  const decreaseTextSize = () => {
-    triggerLight();
-    setTextScale((prev) => Math.max(0.8, Number((prev - 0.1).toFixed(2))));
-  };
-
-  const increaseTextSize = () => {
-    triggerLight();
-    setTextScale((prev) => Math.min(1.5, Number((prev + 0.1).toFixed(2))));
-  };
-
   const styles = createStyles(theme);
 
   return (
@@ -167,8 +174,8 @@ const HomeScreen = ({ navigation }) => {
               <Image source={logoImage} style={styles.logoImage} resizeMode="contain" />
             </View>
             <View>
-              <Text style={styles.topBarTitle}>SortedSupported</Text>
-              <Text style={styles.topBarSubtitle}>Emotional wellbeing support</Text>
+              <Text style={[styles.topBarTitle, { fontSize: 24 * textScale }]}>SortedSupported</Text>
+              <Text style={[styles.topBarSubtitle, { fontSize: 13 * textScale }]}>Emotional wellbeing support</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -188,7 +195,7 @@ const HomeScreen = ({ navigation }) => {
             onChangeText={setSearchQuery}
             placeholder="Search for pages or support..."
             placeholderTextColor={theme.subtext}
-            style={styles.searchInput}
+            style={[styles.searchInput, { fontSize: 15 * textScale }]}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
@@ -262,10 +269,10 @@ const HomeScreen = ({ navigation }) => {
 
           {hasQuery && !isSearching && searchResults.length === 0 ? (
             <View style={[styles.emptySearchState, { backgroundColor: theme.surface }]}> 
-              <Text style={styles.emptySearchTitle}>
+              <Text style={[styles.emptySearchTitle, { fontSize: 17 * textScale }]}> 
                 {searchError ? 'Search is currently unavailable' : 'No results found'}
               </Text>
-              <Text style={styles.emptySearchSubtext}>
+              <Text style={[styles.emptySearchSubtext, { fontSize: 14 * textScale }]}> 
                 {searchError
                   ? 'Please try again in a moment.'
                   : 'Try different keywords to find support pages.'}
@@ -276,7 +283,7 @@ const HomeScreen = ({ navigation }) => {
           {hasQuery && isSearching ? (
             <View style={styles.searchLoadingWrap}>
               <ActivityIndicator size="large" color={theme.primary} />
-              <Text style={styles.searchLoadingText}>Searching sortedsupported.org.uk...</Text>
+              <Text style={[styles.searchLoadingText, { fontSize: 13 * textScale }]}>Searching sortedsupported.org.uk...</Text>
             </View>
           ) : null}
         </View>
@@ -294,85 +301,7 @@ const HomeScreen = ({ navigation }) => {
         <Text style={[styles.urgentHelpText, { fontSize: 17 * textScale }]}>Need urgent help?</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={settingsVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSettingsVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setSettingsVisible(false)}
-        >
-          <TouchableOpacity
-            style={[styles.modalCard, { backgroundColor: theme.surface }]}
-            activeOpacity={1}
-            onPress={() => {}}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>Settings</Text>
-              <TouchableOpacity
-                onPress={() => setSettingsVisible(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Close settings"
-              >
-                <Ionicons name="close" size={22} color={theme.subtext} />
-              </TouchableOpacity>
-            </View>
-            <View style={[styles.modalDivider, { backgroundColor: theme.border }]} />
-            <View style={styles.settingRow}>
-              <View style={styles.settingLabel}>
-                <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={theme.primary} />
-                <Text style={[styles.settingText, { color: theme.text }]}>Dark mode</Text>
-              </View>
-              <Switch
-                value={isDark}
-                onValueChange={() => {
-                  triggerLight();
-                  toggleTheme();
-                }}
-                trackColor={{ false: '#C0C0C0', true: '#8FA0D8' }}
-                thumbColor={isDark ? '#5B6FA8' : '#FFFFFF'}
-              />
-            </View>
-
-            <View style={[styles.settingRow, styles.textSizeRow]}>
-              <View style={styles.settingLabel}>
-                <Ionicons name="text" size={20} color={theme.primary} />
-                <Text style={[styles.settingText, { color: theme.text }]}>Text size</Text>
-              </View>
-              <View style={styles.textAdjuster}>
-                <TouchableOpacity
-                  style={[styles.textStepButton, { borderColor: theme.border }]}
-                  onPress={decreaseTextSize}
-                  accessibilityRole="button"
-                  accessibilityLabel="Decrease text size"
-                >
-                  <Minus size={16} color={theme.primary} strokeWidth={2.6} />
-                </TouchableOpacity>
-
-                <Text style={[styles.textSizeValue, { color: theme.text }]}>{displayTextScale}</Text>
-
-                <TouchableOpacity
-                  style={[styles.textStepButton, { borderColor: theme.border }]}
-                  onPress={increaseTextSize}
-                  accessibilityRole="button"
-                  accessibilityLabel="Increase text size"
-                >
-                  <Plus size={16} color={theme.primary} strokeWidth={2.6} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.versionWrap}>
-              <Text style={[styles.versionText, { color: theme.subtext }]}>
-                {buildNumber ? `Version: ${appVersion} (Build ${buildNumber})` : `Version: ${appVersion}`}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+      <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
     </SafeAreaView>
   );
 };
@@ -479,75 +408,6 @@ const createStyles = (theme) =>
     urgentHelpText: {
       color: '#FFFFFF',
       fontWeight: '700',
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      justifyContent: 'flex-end',
-    },
-    modalCard: {
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      padding: 20,
-      paddingBottom: 30,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 14,
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-    },
-    modalDivider: {
-      height: 1,
-      marginBottom: 16,
-    },
-    settingRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    textSizeRow: {
-      marginTop: 16,
-    },
-    settingLabel: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    settingText: {
-      fontSize: 16,
-    },
-    textAdjuster: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    textStepButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      borderWidth: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: theme.background,
-    },
-    textSizeValue: {
-      minWidth: 30,
-      textAlign: 'center',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    versionWrap: {
-      marginTop: 20,
-      alignItems: 'center',
-    },
-    versionText: {
-      fontSize: 12,
-      textAlign: 'center',
     },
     categoriesContainer: {
       marginTop: 14,
